@@ -10,6 +10,14 @@ import android.os.Build
 import android.util.Log
 import java.util.Locale
 
+internal fun isHuaweiMatePadPaper(
+    manufacturer: String,
+    brand: String,
+    model: String,
+): Boolean {
+    return (manufacturer == "huawei" || brand == "huawei") && model == "hmw-w09"
+}
+
 @Suppress("detekt:all")
 object DeviceInfo {
     private const val TAG = "DeviceInfo"
@@ -60,6 +68,7 @@ object DeviceInfo {
         FIDIBOOK,
         HANVON_960,
         HISENSE_TOUCH_LITE,
+        HUAWEI_MATEPAD_PAPER,
         HYREAD_GAZE_NOTE,
         HYREAD_GAZE_NOTE_CC,
         HYREAD_MINI6,
@@ -296,6 +305,10 @@ object DeviceInfo {
             // Hisense Touch Lite
             BRAND == "hisense" && MODEL == "hitv205n"
             -> Id.HISENSE_TOUCH_LITE
+
+            // Huawei MatePad Paper HMW-W09
+            isHuaweiMatePadPaper(MANUFACTURER, BRAND, MODEL)
+            -> Id.HUAWEI_MATEPAD_PAPER
 
             // Hyread Gaze Note
             MANUFACTURER == "hyread" && MODEL == "r08p"
