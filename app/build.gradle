@@ -13,14 +13,14 @@ android {
     }
 
     defaultConfig {
-        applicationId "org.koreader.launcher"
+        applicationId "io.github.c0n2.acreader"
         versionName versName
         minSdkVersion rootProject.ext.minSdk
         targetSdkVersion rootProject.ext.targetSdk
 
-        manifestPlaceholders.APP_NAME = projectName
+        manifestPlaceholders.APP_NAME = "ACreader"
 
-        buildConfigField "String", "APP_NAME", '"' + projectName + '"'
+        buildConfigField "String", "APP_NAME", '"ACreader"'
         buildConfigField "boolean", "IN_APP_UPDATES", "false"
         buildConfigField "boolean", "SUPPORTS_RUNTIME_CHANGES", "false"
 
