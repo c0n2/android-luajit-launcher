@@ -5,7 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.koreader.launcher.device.epd.HuaweiMatePadPaperEPDController
-import org.koreader.launcher.device.epd.huaweiForceRefreshMode
+import org.koreader.launcher.device.epd.huaweiDefaultModeForRefresh
 
 class HuaweiMatePadPaperTest {
     @Test
@@ -18,21 +18,32 @@ class HuaweiMatePadPaperTest {
     }
 
     @Test
-    fun requestsForceRefreshOnlyForFullModes() {
-        assertEquals(32, huaweiForceRefreshMode(32, null))
-        assertEquals(32, huaweiForceRefreshMode(0, "EPD_FULL"))
-        assertEquals(null, huaweiForceRefreshMode(0, null))
-        assertEquals(null, huaweiForceRefreshMode(2, "EPD_PART"))
-        assertEquals(null, huaweiForceRefreshMode(3, "EPD_A2"))
+    fun mapsEveryHuaweiFrameToItsDefaultRefreshMode() {
+        assertEquals(32, huaweiDefaultModeForRefresh(32, null))
+        assertEquals(0, huaweiDefaultModeForRefresh(0, null))
+
+        assertEquals(32, huaweiDefaultModeForRefresh(0, "EPD_FULL"))
+        assertEquals(0, huaweiDefaultModeForRefresh(0, "EPD_AUTO"))
+
+        assertEquals(null, huaweiDefaultModeForRefresh(2, null))
+        assertEquals(null, huaweiDefaultModeForRefresh(3, null))
+        assertEquals(null, huaweiDefaultModeForRefresh(0, "EPD_PART"))
     }
 
     @Test
     fun exposesKoreaderEinkContract() {
         val epd = HuaweiMatePadPaperEPDController()
+
         assertEquals("huawei", epd.getPlatform())
         assertEquals("all", epd.getMode())
+
         assertEquals(32, epd.getWaveformFull())
         assertEquals(0, epd.getWaveformPartial())
+
+        assertEquals(32, epd.getWaveformFullUi())
+        assertEquals(0, epd.getWaveformPartialUi())
+        assertEquals(0, epd.getWaveformFast())
+
         assertFalse(epd.needsView())
     }
 }

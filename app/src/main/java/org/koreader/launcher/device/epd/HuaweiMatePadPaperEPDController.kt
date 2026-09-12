@@ -7,11 +7,17 @@ import org.koreader.launcher.device.EPDInterface
 private const val HUAWEI_PARTIAL = 0
 private const val HUAWEI_FULL = 32
 
-internal fun huaweiForceRefreshMode(mode: Int, epdMode: String?): Int? {
-    return if (mode == HUAWEI_FULL || epdMode == "EPD_FULL") {
-        HUAWEI_FULL
-    } else {
-        null
+internal fun huaweiDefaultModeForRefresh(
+    mode: Int,
+    epdMode: String?,
+): Int? {
+    return when {
+        epdMode == "EPD_FULL" -> HUAWEI_FULL
+        epdMode == "EPD_AUTO" -> HUAWEI_PARTIAL
+        epdMode != null -> null
+        mode == HUAWEI_FULL -> HUAWEI_FULL
+        mode == HUAWEI_PARTIAL -> HUAWEI_PARTIAL
+        else -> null
     }
 }
 
@@ -20,9 +26,9 @@ class HuaweiMatePadPaperEPDController : EPDInterface {
         private const val TAG = "EPD"
     }
 
-    private val forceRefreshMethod by lazy {
+    private val setDefaultModeMethod by lazy {
         Class.forName("android.eink.EPDCDevice")
-            .getMethod("forceRefresh", Integer.TYPE)
+            .getMethod("setEpdcDefaultMode", Integer.TYPE)
     }
 
     override fun getPlatform() = "huawei"
@@ -38,7 +44,6 @@ class HuaweiMatePadPaperEPDController : EPDInterface {
     override fun getWaveformDelayUi() = 0
     override fun getWaveformDelayFast() = 0
 
-    // forceRefresh is device-level and does not require a dedicated SurfaceView.
     override fun needsView() = false
 
     override fun setEpdMode(
@@ -51,21 +56,41 @@ class HuaweiMatePadPaperEPDController : EPDInterface {
         height: Int,
         epdMode: String?,
     ) {
-        val refreshMode = huaweiForceRefreshMode(mode, epdMode) ?: return
+        val defaultMode =
+            huaweiDefaultModeForRefresh(mode, epdMode) ?: return
 
         try {
-            forceRefreshMethod.invoke(null, refreshMode)
+            setDefaultModeMethod.invoke(null, defaultMode)
 
-            Log.v(TAG, "Huawei MatePad Paper forceRefresh($refreshMode)")
+            Log.v(
+                TAG,
+                "Huawei MatePad Paper setEpdcDefaultMode($defaultMode)"
+            )
         } catch (e: Exception) {
             Log.e(
                 TAG,
-                "Huawei MatePad Paper forceRefresh($refreshMode) failed",
+                "Huawei MatePad Paper setEpdcDefaultMode($defaultMode) failed",
                 e
             )
         }
     }
 
     override fun resume() {}
-    override fun pause() {}
+
+    override fun pause() {
+        try {
+            setDefaultModeMethod.invoke(null, HUAWEI_PARTIAL)
+
+            Log.v(
+                TAG,
+                "Huawei MatePad Paper pause: setEpdcDefaultMode(0)"
+            )
+        } catch (e: Exception) {
+            Log.e(
+                TAG,
+                "Huawei MatePad Paper pause reset failed",
+                e
+            )
+        }
+    }
 }
