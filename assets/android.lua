@@ -716,6 +716,8 @@ int acr_window_enable_frame_timestamps(ANativeWindow* window);
 int acr_window_get_next_frame_id(ANativeWindow* window, uint64_t* frame_id);
 int acr_window_wait_display_present(ANativeWindow* window, uint64_t frame_id,
         int timeout_ms, int64_t* present_ns);
+int acr_window_wait_refresh_start(ANativeWindow* window, uint64_t frame_id,
+        int timeout_ms, int64_t* latch_ns, int64_t* first_refresh_ns, int* polls);
 
 // from android-ndk/platforms/android-9/arch-x86/usr/include/jni.h:
 
@@ -1653,6 +1655,24 @@ local function run(android_app_state)
             present_ns
         )
         return rc, present_ns[0]
+    end
+
+    android.waitWindowRefreshStart = function(frame_id, timeout_ms)
+        if frame_id == nil or android.app.window == nil then
+            return -1, ffi.new("int64_t", -2), ffi.new("int64_t", -2), 0
+        end
+        local latch_ns = ffi.new("int64_t[1]", -2)
+        local first_refresh_ns = ffi.new("int64_t[1]", -2)
+        local polls = ffi.new("int[1]", 0)
+        local rc = android.glue.acr_window_wait_refresh_start(
+            android.app.window,
+            frame_id,
+            timeout_ms or 100,
+            latch_ns,
+            first_refresh_ns,
+            polls
+        )
+        return rc, latch_ns[0], first_refresh_ns[0], polls[0]
     end
 
     android.dir, android.nativeLibraryDir =
