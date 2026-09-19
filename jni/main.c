@@ -20,6 +20,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <stdlib.h>
+#include <stdint.h>
+#include <errno.h>
+#include <time.h>
 
 #ifdef KO_DLOPEN_LUAJIT
 #  include <dlfcn.h>
@@ -48,6 +51,121 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #define  LOADER_ASSET "android.lua"
+
+/*
+ * ACreader Hisense A7 diagnostic bridge for Android 10 frame timestamps.
+ *
+ * The public NDK keeps ANativeWindow opaque, but Android 10's framework ABI
+ * exposes query/perform hooks in system/window.h. Keep this isolated to the
+ * probe branch and fail closed if the vendor window does not report present
+ * timestamp support.
+ */
+#define ACR_NW_QUERY_FRAME_TIMESTAMPS_SUPPORTS_PRESENT 18
+#define ACR_NW_GET_NEXT_FRAME_ID 24
+#define ACR_NW_ENABLE_FRAME_TIMESTAMPS 25
+#define ACR_NW_GET_FRAME_TIMESTAMPS 27
+#define ACR_NW_TIMESTAMP_PENDING (-2LL)
+#define ACR_NW_TIMESTAMP_INVALID (-1LL)
+
+typedef struct {
+    int magic;
+    int version;
+    void* reserved[4];
+    void (*incRef)(void* base);
+    void (*decRef)(void* base);
+} acr_native_base_t;
+
+typedef struct {
+    acr_native_base_t common;
+    uint32_t flags;
+    int minSwapInterval;
+    int maxSwapInterval;
+    float xdpi;
+    float ydpi;
+    intptr_t oem[4];
+    int (*setSwapInterval)(ANativeWindow* window, int interval);
+    void* dequeueBuffer_DEPRECATED;
+    void* lockBuffer_DEPRECATED;
+    void* queueBuffer_DEPRECATED;
+    int (*query)(const ANativeWindow* window, int what, int* value);
+    int (*perform)(ANativeWindow* window, int operation, ...);
+} acr_native_window_abi_t;
+
+static acr_native_window_abi_t* acr_window_abi(ANativeWindow* window) {
+    return (acr_native_window_abi_t*)window;
+}
+
+__attribute__((visibility("default")))
+int acr_window_frame_timestamps_supported(ANativeWindow* window) {
+    if (window == NULL) return -EINVAL;
+    acr_native_window_abi_t* abi = acr_window_abi(window);
+    if (abi->query == NULL) return -ENOSYS;
+    int supported = 0;
+    int rc = abi->query(window, ACR_NW_QUERY_FRAME_TIMESTAMPS_SUPPORTS_PRESENT, &supported);
+    if (rc != 0) return rc;
+    return supported ? 1 : 0;
+}
+
+__attribute__((visibility("default")))
+int acr_window_enable_frame_timestamps(ANativeWindow* window) {
+    if (window == NULL) return -EINVAL;
+    acr_native_window_abi_t* abi = acr_window_abi(window);
+    if (abi->perform == NULL) return -ENOSYS;
+    return abi->perform(window, ACR_NW_ENABLE_FRAME_TIMESTAMPS, 1);
+}
+
+__attribute__((visibility("default")))
+int acr_window_get_next_frame_id(ANativeWindow* window, uint64_t* frame_id) {
+    if (window == NULL || frame_id == NULL) return -EINVAL;
+    acr_native_window_abi_t* abi = acr_window_abi(window);
+    if (abi->perform == NULL) return -ENOSYS;
+    return abi->perform(window, ACR_NW_GET_NEXT_FRAME_ID, frame_id);
+}
+
+static int64_t acr_elapsed_ms(const struct timespec* start, const struct timespec* now) {
+    int64_t sec = (int64_t)now->tv_sec - (int64_t)start->tv_sec;
+    int64_t nsec = (int64_t)now->tv_nsec - (int64_t)start->tv_nsec;
+    return sec * 1000LL + nsec / 1000000LL;
+}
+
+__attribute__((visibility("default")))
+int acr_window_wait_display_present(ANativeWindow* window, uint64_t frame_id,
+                                    int timeout_ms, int64_t* present_ns) {
+    if (window == NULL || present_ns == NULL || timeout_ms < 0) return -EINVAL;
+    acr_native_window_abi_t* abi = acr_window_abi(window);
+    if (abi->perform == NULL) return -ENOSYS;
+
+    struct timespec start;
+    struct timespec now;
+    const struct timespec pause = { .tv_sec = 0, .tv_nsec = 500000L };
+    if (clock_gettime(CLOCK_MONOTONIC, &start) != 0) return -errno;
+
+    for (;;) {
+        int64_t display_present = ACR_NW_TIMESTAMP_PENDING;
+        int rc = abi->perform(window, ACR_NW_GET_FRAME_TIMESTAMPS,
+                frame_id,
+                (int64_t*)NULL, (int64_t*)NULL, (int64_t*)NULL,
+                (int64_t*)NULL, (int64_t*)NULL, (int64_t*)NULL,
+                &display_present,
+                (int64_t*)NULL, (int64_t*)NULL);
+
+        if (rc == 0 && display_present >= 0) {
+            *present_ns = display_present;
+            return 0;
+        }
+        if (rc == 0 && display_present == ACR_NW_TIMESTAMP_INVALID) {
+            *present_ns = display_present;
+            return -ENODATA;
+        }
+
+        if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) return -errno;
+        if (acr_elapsed_ms(&start, &now) >= timeout_ms) {
+            *present_ns = display_present;
+            return -ETIMEDOUT;
+        }
+        nanosleep(&pause, NULL);
+    }
+}
 
 static int window_ready = 0;
 static int gained_focus = 0;
