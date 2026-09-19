@@ -710,6 +710,13 @@ int32_t ANativeWindow_lock(ANativeWindow* window, ANativeWindow_Buffer* outBuffe
         ARect* inOutDirtyBounds);
 int32_t ANativeWindow_unlockAndPost(ANativeWindow* window);
 
+// ACreader Hisense A7 native present-timestamp probe (libluajit-launcher.so):
+int acr_window_frame_timestamps_supported(ANativeWindow* window);
+int acr_window_enable_frame_timestamps(ANativeWindow* window);
+int acr_window_get_next_frame_id(ANativeWindow* window, uint64_t* frame_id);
+int acr_window_wait_display_present(ANativeWindow* window, uint64_t frame_id,
+        int timeout_ms, int64_t* present_ns);
+
 // from android-ndk/platforms/android-9/arch-x86/usr/include/jni.h:
 
 typedef uint8_t  jboolean; /* unsigned 8 bits */
@@ -1594,6 +1601,59 @@ The C code will call this function.
 --]]
 local function run(android_app_state)
     android.app = ffi.cast("struct android_app*", android_app_state)
+
+    local present_barrier_window = nil
+
+    android.prepareWindowPresentBarrier = function()
+        if android.app.window == nil then
+            return false, -1
+        end
+
+        if present_barrier_window == android.app.window then
+            return true, 0
+        end
+
+        local supported = android.glue.acr_window_frame_timestamps_supported(android.app.window)
+        if supported ~= 1 then
+            return false, supported
+        end
+
+        local rc = android.glue.acr_window_enable_frame_timestamps(android.app.window)
+        if rc ~= 0 then
+            return false, rc
+        end
+
+        present_barrier_window = android.app.window
+        return true, 0
+    end
+
+    android.getNextWindowFrameId = function()
+        local ok, rc = android.prepareWindowPresentBarrier()
+        if not ok then
+            return nil, rc
+        end
+
+        local frame_id = ffi.new("uint64_t[1]")
+        rc = android.glue.acr_window_get_next_frame_id(android.app.window, frame_id)
+        if rc ~= 0 then
+            return nil, rc
+        end
+        return frame_id[0], 0
+    end
+
+    android.waitWindowDisplayPresent = function(frame_id, timeout_ms)
+        if frame_id == nil or android.app.window == nil then
+            return -1, ffi.new("int64_t", -2)
+        end
+        local present_ns = ffi.new("int64_t[1]", -2)
+        local rc = android.glue.acr_window_wait_display_present(
+            android.app.window,
+            frame_id,
+            timeout_ms or 250,
+            present_ns
+        )
+        return rc, present_ns[0]
+    end
 
     android.dir, android.nativeLibraryDir =
         JNI:context(android.app.activity.vm, function(jni)
