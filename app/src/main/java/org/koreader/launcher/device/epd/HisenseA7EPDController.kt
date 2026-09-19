@@ -6,7 +6,7 @@ import org.koreader.launcher.device.EPDInterface
 
 private const val HISENSE_PARTIAL = 0
 private const val HISENSE_FULL = 1
-private const val HISENSE_FULL_DELAY_MS = 80L
+private const val HISENSE_FULL_DELAY_MS = 40L
 
 class HisenseA7EPDController : EPDInterface {
     companion object {
