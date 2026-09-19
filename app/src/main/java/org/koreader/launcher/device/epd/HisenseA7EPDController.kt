@@ -40,17 +40,19 @@ class HisenseA7EPDController : EPDInterface {
         val requestFull = epdMode == "EPD_FULL" || (epdMode == null && mode == HISENSE_FULL)
         if (!requestFull) return
 
-        Log.i(TAG, "Hisense A7 vendor forceClear scheduled: next animation frame")
+        Log.i(TAG, "Hisense A7 vendor forceClear scheduled: after next UI frame")
 
         targetView.postOnAnimation {
-            try {
-                val epd = targetView.context.getSystemService("epd")
-                val method = Class.forName("com.hmct.epd.EpdManager")
-                    .getMethod("forceClear")
-                method.invoke(epd)
-                Log.i(TAG, "Hisense A7 vendor forceClear PASS on next animation frame")
-            } catch (e: Exception) {
-                Log.e(TAG, "Hisense A7 vendor forceClear failed on next animation frame", e)
+            targetView.post {
+                try {
+                    val epd = targetView.context.getSystemService("epd")
+                    val method = Class.forName("com.hmct.epd.EpdManager")
+                        .getMethod("forceClear")
+                    method.invoke(epd)
+                    Log.i(TAG, "Hisense A7 vendor forceClear PASS after next UI frame")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Hisense A7 vendor forceClear failed after next UI frame", e)
+                }
             }
         }
     }
