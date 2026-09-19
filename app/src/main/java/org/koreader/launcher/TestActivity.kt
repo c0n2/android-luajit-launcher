@@ -136,6 +136,19 @@ class TestActivity: AppCompatActivity() {
         binding.buttonTryEpd.setOnClickListener {
             runEpd(binding.spinnerEpd.selectedItem.toString())
         }
+
+        val hisenseModeAdapter: ArrayAdapter<String> = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            (1..9).map { it.toString() }
+        )
+        hisenseModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerHisenseMode.adapter = hisenseModeAdapter
+        binding.spinnerHisenseMode.setSelection(2) // known-safe reading mode = 3
+        binding.buttonSetHisenseMode.setOnClickListener {
+            val mode = binding.spinnerHisenseMode.selectedItem.toString().toInt()
+            setHisenseAppMode(mode)
+        }
         binding.buttonTryLights.setOnClickListener {
             runLights(binding.spinnerLights.selectedItem.toString())
         }
@@ -221,6 +234,31 @@ class TestActivity: AppCompatActivity() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private fun setHisenseAppMode(mode: Int) {
+        if (mode !in 1..9) return
+
+        try {
+            val epd = getSystemService("epd")
+                ?: throw IllegalStateException("epd service unavailable")
+            val method = Class.forName("com.hmct.epd.EpdManager").getMethod(
+                "addAppMode",
+                String::class.java,
+                Int::class.javaPrimitiveType
+            )
+            method.invoke(epd, packageName, mode)
+            val encodedMode = 0x200 or mode
+            val msg = "Hisense A7 app mode request PASS: mode=$mode encoded=0x${encodedMode.toString(16)} pkg=$packageName"
+            Log.i(tag, msg)
+            binding.currentState.append("$msg\n")
+            Toast.makeText(this, "A7 mode $mode requested", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            val msg = "Hisense A7 app mode request FAILED: mode=$mode ${e.javaClass.simpleName}: ${e.message}"
+            Log.e(tag, msg, e)
+            binding.currentState.append("$msg\n")
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
         }
     }
 
