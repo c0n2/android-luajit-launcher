@@ -18,6 +18,14 @@ internal fun isHuaweiMatePadPaper(
     return (manufacturer == "huawei" || brand == "huawei") && model == "hmw-w09"
 }
 
+internal fun isHisenseA7(
+    manufacturer: String,
+    brand: String,
+    model: String,
+): Boolean {
+    return (manufacturer == "hisense" || brand == "hisense") && model == "hnr320t"
+}
+
 @Suppress("detekt:all")
 object DeviceInfo {
     private const val TAG = "DeviceInfo"
@@ -67,6 +75,7 @@ object DeviceInfo {
         ENERGY,
         FIDIBOOK,
         HANVON_960,
+        HISENSE_A7,
         HISENSE_TOUCH_LITE,
         HUAWEI_MATEPAD_PAPER,
         HYREAD_GAZE_NOTE,
@@ -301,6 +310,10 @@ object DeviceInfo {
             // Hanvon 960
             BRAND == "freescale" && PRODUCT == "evk_6sl_eink"
             -> Id.HANVON_960
+
+            // Hisense A7 HNR320T
+            isHisenseA7(MANUFACTURER, BRAND, MODEL)
+            -> Id.HISENSE_A7
 
             // Hisense Touch Lite
             BRAND == "hisense" && MODEL == "hitv205n"

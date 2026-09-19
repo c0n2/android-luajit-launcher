@@ -7,6 +7,7 @@ import android.util.Log
 import org.koreader.launcher.device.epd.CremaEPDController
 import org.koreader.launcher.device.epd.LenovoSmartPaperEPDController
 import org.koreader.launcher.device.epd.HuaweiMatePadPaperEPDController
+import org.koreader.launcher.device.epd.HisenseA7EPDController
 import org.koreader.launcher.device.epd.NookEPDController
 import org.koreader.launcher.device.epd.TolinoEPDController
 import org.koreader.launcher.device.epd.RK3026EPDController
@@ -200,6 +201,12 @@ object EPDFactory {
                 -> {
                     logController("Lenovo SmartPaper")
                     LenovoSmartPaperEPDController()
+                }
+
+                DeviceInfo.Id.HISENSE_A7,
+                -> {
+                    logController("Hisense A7")
+                    HisenseA7EPDController()
                 }
 
                 DeviceInfo.Id.HUAWEI_MATEPAD_PAPER,
