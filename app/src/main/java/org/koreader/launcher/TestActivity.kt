@@ -13,6 +13,7 @@ import org.koreader.launcher.device.Device
 import org.koreader.launcher.device.DeviceInfo
 import org.koreader.launcher.device.EPDInterface
 import org.koreader.launcher.device.LightsInterface
+import org.koreader.launcher.device.epd.HisenseA7EPDController
 import org.koreader.launcher.device.epd.NGL4EPDController
 import org.koreader.launcher.device.epd.NookEmperorEPDController
 import org.koreader.launcher.device.epd.OnyxEPDController
@@ -68,6 +69,7 @@ class TestActivity: AppCompatActivity() {
         }
 
         // EPD drivers
+        epdMap["Hisense A7 (root)"] = HisenseA7EPDController()
         epdMap["Freescale/NTX"] = TolinoEPDController()
         epdMap["Nook GL4"] = NGL4EPDController()
         epdMap["Nook GL4 Plus"] = NookEmperorEPDController()
@@ -204,6 +206,7 @@ class TestActivity: AppCompatActivity() {
                         }
                     }
 
+                    "Hisense A7 (root)",
                     "Rockchip RK3026",
                     "Rockchip RK3368",
                     "Rockchip RK3566" -> {
