@@ -78,7 +78,7 @@ class HisenseA7EPDController : EPDInterface {
         }
     }
 
-    override fun getPlatform() = "hisense-a7-native-present-probe"
+    override fun getPlatform() = "hisense-a7-root"
     override fun getMode() = "all"
 
     override fun getWaveformFull() = HISENSE_FULL
