@@ -154,8 +154,14 @@ int acr_window_wait_display_present(ANativeWindow* window, uint64_t frame_id,
             return 0;
         }
         if (rc == 0 && display_present == ACR_NW_TIMESTAMP_INVALID) {
+            /*
+             * Android 10 FrameEvents reports DISPLAY_PRESENT info after
+             * addPostCompositeCalled. On some Hisense A7 paths the present
+             * fence itself is NO_FENCE/INVALID, but reaching this state still
+             * proves this exact frame has crossed the post-composite point.
+             */
             *present_ns = display_present;
-            return -ENODATA;
+            return 1; // POST_COMPOSITE_NO_PRESENT_FENCE
         }
 
         if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) return -errno;
