@@ -1,11 +1,6 @@
 package org.koreader.launcher.device.epd
 
-import android.app.Activity
-import android.graphics.Bitmap
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import android.view.PixelCopy
 import android.view.View
 import org.koreader.launcher.device.EPDInterface
 
@@ -17,7 +12,7 @@ class HisenseA7EPDController : EPDInterface {
         private const val TAG = "EPD"
     }
 
-    override fun getPlatform() = "hisense-a7-vendor-test"
+    override fun getPlatform() = "hisense-a7-native-present-probe"
     override fun getMode() = "all"
 
     override fun getWaveformFull() = HISENSE_FULL
@@ -45,43 +40,13 @@ class HisenseA7EPDController : EPDInterface {
         val requestFull = epdMode == "EPD_FULL" || (epdMode == null && mode == HISENSE_FULL)
         if (!requestFull) return
 
-        val activity = targetView.context as? Activity
-        if (activity == null) {
-            Log.e(TAG, "Hisense A7 PixelCopy barrier unavailable: context is not Activity")
-            return
-        }
-
-        val probe = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-        Log.i(TAG, "Hisense A7 vendor forceClear scheduled: PixelCopy barrier")
-
         try {
-            PixelCopy.request(
-                activity.window,
-                probe,
-                { result ->
-                    try {
-                        if (result == PixelCopy.SUCCESS) {
-                            Log.i(TAG, "Hisense A7 PixelCopy barrier PASS")
-                        } else {
-                            Log.w(TAG, "Hisense A7 PixelCopy barrier result=$result; forcing clear as fallback")
-                        }
-
-                        val epd = targetView.context.getSystemService("epd")
-                        val method = Class.forName("com.hmct.epd.EpdManager")
-                            .getMethod("forceClear")
-                        method.invoke(epd)
-                        Log.i(TAG, "Hisense A7 vendor forceClear PASS after PixelCopy barrier")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Hisense A7 vendor forceClear failed after PixelCopy barrier", e)
-                    } finally {
-                        probe.recycle()
-                    }
-                },
-                Handler(Looper.getMainLooper())
-            )
+            val epd = targetView.context.getSystemService("epd")
+            val method = Class.forName("com.hmct.epd.EpdManager").getMethod("forceClear")
+            method.invoke(epd)
+            Log.i(TAG, "Hisense A7 vendor forceClear PASS")
         } catch (e: Exception) {
-            probe.recycle()
-            Log.e(TAG, "Hisense A7 PixelCopy barrier request failed", e)
+            Log.e(TAG, "Hisense A7 vendor forceClear failed", e)
         }
     }
 
