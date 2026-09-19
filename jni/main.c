@@ -167,6 +167,60 @@ int acr_window_wait_display_present(ANativeWindow* window, uint64_t frame_id,
     }
 }
 
+
+__attribute__((visibility("default")))
+int acr_window_wait_refresh_start(ANativeWindow* window, uint64_t frame_id,
+                                  int timeout_ms, int64_t* latch_ns,
+                                  int64_t* first_refresh_ns, int* polls) {
+    if (window == NULL || latch_ns == NULL || first_refresh_ns == NULL ||
+            polls == NULL || timeout_ms < 0) return -EINVAL;
+    acr_native_window_abi_t* abi = acr_window_abi(window);
+    if (abi->perform == NULL) return -ENOSYS;
+
+    struct timespec start;
+    struct timespec now;
+    const struct timespec pause = { .tv_sec = 0, .tv_nsec = 500000L };
+    if (clock_gettime(CLOCK_MONOTONIC, &start) != 0) return -errno;
+
+    *latch_ns = ACR_NW_TIMESTAMP_PENDING;
+    *first_refresh_ns = ACR_NW_TIMESTAMP_PENDING;
+    *polls = 0;
+
+    for (;;) {
+        int64_t latch = ACR_NW_TIMESTAMP_PENDING;
+        int64_t first_refresh = ACR_NW_TIMESTAMP_PENDING;
+        int rc = abi->perform(window, ACR_NW_GET_FRAME_TIMESTAMPS,
+                frame_id,
+                (int64_t*)NULL, (int64_t*)NULL, &latch,
+                &first_refresh,
+                (int64_t*)NULL, (int64_t*)NULL,
+                (int64_t*)NULL, (int64_t*)NULL, (int64_t*)NULL);
+
+        (*polls)++;
+        *latch_ns = latch;
+        *first_refresh_ns = first_refresh;
+
+        // Prefer SurfaceFlinger's first refresh-start timestamp: it is tied to
+        // this exact frame and does not depend on a display-present fence.
+        if (rc == 0 && first_refresh >= 0) {
+            return 2; // FIRST_REFRESH_START
+        }
+
+        // If the vendor marks first-refresh unavailable but latch is valid,
+        // latch is still a frame-specific synchronization point.
+        if (rc == 0 && first_refresh == ACR_NW_TIMESTAMP_INVALID && latch >= 0) {
+            return 1; // LATCH
+        }
+
+        if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) return -errno;
+        if (acr_elapsed_ms(&start, &now) >= timeout_ms) {
+            if (latch >= 0) return 1; // LATCH fallback at timeout
+            return -ETIMEDOUT;
+        }
+        nanosleep(&pause, NULL);
+    }
+}
+
 static int window_ready = 0;
 static int gained_focus = 0;
 
