@@ -87,6 +87,30 @@
                     android:minHeight="48dp" />
             </LinearLayout>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/border"
+                android:layout_marginLeft="@dimen/border"
+                android:layout_marginTop="@dimen/section"
+                android:layout_marginEnd="@dimen/border"
+                android:layout_marginRight="@dimen/border"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/buttonSetHisenseMode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="@dimen/button"
+                    android:text="A7 MODE" />
+
+                <Spinner
+                    android:id="@+id/spinnerHisenseMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp" />
+            </LinearLayout>
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
