@@ -7,16 +7,14 @@ import org.koreader.launcher.device.EPDInterface
 private const val HUAWEI_PARTIAL = 0
 private const val HUAWEI_FULL = 32
 
-internal fun huaweiDefaultModeForRefresh(
+internal fun huaweiForceRefreshModeForRefresh(
     mode: Int,
     epdMode: String?,
 ): Int? {
     return when {
         epdMode == "EPD_FULL" -> HUAWEI_FULL
-        epdMode == "EPD_AUTO" -> HUAWEI_PARTIAL
         epdMode != null -> null
         mode == HUAWEI_FULL -> HUAWEI_FULL
-        mode == HUAWEI_PARTIAL -> HUAWEI_PARTIAL
         else -> null
     }
 }
@@ -26,9 +24,22 @@ class HuaweiMatePadPaperEPDController : EPDInterface {
         private const val TAG = "EPD"
     }
 
-    private val setDefaultModeMethod by lazy {
+    private val epdcDeviceClass by lazy {
         Class.forName("android.eink.EPDCDevice")
-            .getMethod("setEpdcDefaultMode", Integer.TYPE)
+    }
+
+    private val setDefaultModeMethod by lazy {
+        epdcDeviceClass.getMethod(
+            "setEpdcDefaultMode",
+            Integer.TYPE
+        )
+    }
+
+    private val forceRefreshMethod by lazy {
+        epdcDeviceClass.getMethod(
+            "forceRefresh",
+            Integer.TYPE
+        )
     }
 
     override fun getPlatform() = "huawei"
@@ -56,22 +67,24 @@ class HuaweiMatePadPaperEPDController : EPDInterface {
         height: Int,
         epdMode: String?,
     ) {
-        val defaultMode =
-            huaweiDefaultModeForRefresh(mode, epdMode) ?: return
+        val forceRefreshMode =
+            huaweiForceRefreshModeForRefresh(mode, epdMode)
 
-        try {
-            setDefaultModeMethod.invoke(null, defaultMode)
+        if (forceRefreshMode != null) {
+            try {
+                forceRefreshMethod.invoke(null, forceRefreshMode)
 
-            Log.v(
-                TAG,
-                "Huawei MatePad Paper setEpdcDefaultMode($defaultMode)"
-            )
-        } catch (e: Exception) {
-            Log.e(
-                TAG,
-                "Huawei MatePad Paper setEpdcDefaultMode($defaultMode) failed",
-                e
-            )
+                Log.v(
+                    TAG,
+                    "Huawei MatePad Paper forceRefresh($forceRefreshMode)"
+                )
+            } catch (e: Exception) {
+                Log.e(
+                    TAG,
+                    "Huawei MatePad Paper forceRefresh($forceRefreshMode) failed",
+                    e
+                )
+            }
         }
     }
 

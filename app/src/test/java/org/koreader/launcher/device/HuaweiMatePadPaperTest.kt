@@ -5,7 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.koreader.launcher.device.epd.HuaweiMatePadPaperEPDController
-import org.koreader.launcher.device.epd.huaweiDefaultModeForRefresh
+import org.koreader.launcher.device.epd.huaweiForceRefreshModeForRefresh
 
 class HuaweiMatePadPaperTest {
     @Test
@@ -18,16 +18,18 @@ class HuaweiMatePadPaperTest {
     }
 
     @Test
-    fun mapsEveryHuaweiFrameToItsDefaultRefreshMode() {
-        assertEquals(32, huaweiDefaultModeForRefresh(32, null))
-        assertEquals(0, huaweiDefaultModeForRefresh(0, null))
+    fun fullRefreshUsesOneShotForceRefresh() {
+        assertEquals(32, huaweiForceRefreshModeForRefresh(32, null))
+        assertEquals(32, huaweiForceRefreshModeForRefresh(0, "EPD_FULL"))
+    }
 
-        assertEquals(32, huaweiDefaultModeForRefresh(0, "EPD_FULL"))
-        assertEquals(0, huaweiDefaultModeForRefresh(0, "EPD_AUTO"))
-
-        assertEquals(null, huaweiDefaultModeForRefresh(2, null))
-        assertEquals(null, huaweiDefaultModeForRefresh(3, null))
-        assertEquals(null, huaweiDefaultModeForRefresh(0, "EPD_PART"))
+    @Test
+    fun nonFullRefreshDoesNotForceRefresh() {
+        assertEquals(null, huaweiForceRefreshModeForRefresh(0, null))
+        assertEquals(null, huaweiForceRefreshModeForRefresh(0, "EPD_AUTO"))
+        assertEquals(null, huaweiForceRefreshModeForRefresh(2, null))
+        assertEquals(null, huaweiForceRefreshModeForRefresh(3, null))
+        assertEquals(null, huaweiForceRefreshModeForRefresh(0, "EPD_PART"))
     }
 
     @Test
